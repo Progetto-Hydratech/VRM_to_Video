@@ -1,0 +1,7 @@
+streams:
+  victron:
+    - rtsp://192.168.1.112:8554/victron
+
+onvif:
+  listen: ":8555"
+  name: "Victron VRM"
