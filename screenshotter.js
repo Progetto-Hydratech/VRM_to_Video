@@ -116,41 +116,70 @@ async function fetchTelemetry(token) {
 // ── HTML render ────────────────────────────────────────────────────────────
 function makeHTML(data) {
   const { grid, essLoads, pvPower, soc, batPower, batDir, temp } = data;
-  const batSub = [batDir, batPower].filter(Boolean).join(' ');
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  const socNum = parseFloat(soc);
+  const socPct = isNaN(socNum) ? 0 : Math.max(0, Math.min(100, socNum));
+  const batColor = socPct > 50 ? '#3fb950' : socPct > 20 ? '#d29922' : '#f78166';
+
+  const isCharging    = batDir === 'Charging';
+  const isDischarging = batDir === 'Discharging';
+  const batDirIT      = isCharging ? 'In carica' : isDischarging ? 'In scarica' : '';
+  const batDirColor   = isCharging ? '#3fb950' : isDischarging ? '#f78166' : '#8b949e';
+  const batSub        = [batDirIT, batPower].filter(Boolean).join(' · ');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+<style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { width:${WIDTH}px; height:${HEIGHT}px; background:#0d1117; color:#e6edf3;
   font-family:'Segoe UI',system-ui,sans-serif;
-  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:16px; }
-.header { width:94%; display:flex; align-items:center; justify-content:space-between; }
-h1 { font-size:28px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
-.temp-badge { background:#161b22; border:2px solid #8b949e; border-radius:12px; padding:8px 18px;
-  font-size:20px; font-weight:700; color:#8b949e; }
-.temp-badge span { font-size:13px; display:block; color:#484f58; text-transform:uppercase; letter-spacing:1px; }
-.grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; width:94%; height:72%; }
-.card { background:#161b22; border-radius:16px; padding:32px 36px; border-left:6px solid #58a6ff;
+  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:14px; }
+.topbar { width:94%; display:flex; align-items:center; justify-content:flex-end; }
+.temp-badge { background:#161b22; border:2px solid #8b949e; border-radius:12px; padding:8px 20px;
+  font-size:22px; font-weight:700; color:#c9d1d9; }
+.temp-badge span { font-size:12px; display:block; color:#484f58; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; width:94%; flex:1; max-height:82%; }
+.card { background:#161b22; border-radius:16px; padding:28px 32px; border-left:6px solid #58a6ff;
   display:flex; flex-direction:column; justify-content:center; }
 .card.green  { border-color:#3fb950; }
 .card.orange { border-color:#f78166; }
 .card.yellow { border-color:#d29922; }
-.lbl { font-size:22px; color:#58a6ff; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; font-weight:700; }
+.lbl { font-size:14px; color:#58a6ff; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; font-weight:700;
+  display:flex; align-items:center; gap:8px; }
 .card.green  .lbl { color:#3fb950; }
 .card.orange .lbl { color:#f78166; }
 .card.yellow .lbl { color:#d29922; }
-.val { font-size:72px; font-weight:800; color:#fff; line-height:1; }
-.sub { font-size:22px; color:#3fb950; margin-top:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
-.ts  { font-size:13px; color:#484f58; }
+.lbl .mdi { font-size:20px; }
+.lbl2 { font-size:11px; color:#484f58; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:600; }
+.val { font-size:64px; font-weight:800; color:#fff; line-height:1; }
+.sub { font-size:18px; margin-top:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
+.bat-bar-wrap { margin-top:12px; background:#0d1117; border-radius:8px; height:12px; width:100%; overflow:hidden; }
+.bat-bar-fill { height:100%; border-radius:8px; transition:width .3s; }
+.ts { font-size:17px; color:#8b949e; font-weight:600; }
 </style></head><body>
-<div class="header">
-  <h1>🏠 Casa Mia — Victron VRM</h1>
+<div class="topbar">
   <div class="temp-badge"><span>Temp. Soffitta</span>${temp}</div>
 </div>
 <div class="grid">
-  <div class="card"><div class="lbl">⚡ Grid</div><div class="val">${grid}</div></div>
-  <div class="card green"><div class="lbl">☀️ MPPT N°1</div><div class="val">${pvPower}</div></div>
-  <div class="card orange"><div class="lbl">🔌 Output Power</div><div class="val">${essLoads}</div></div>
-  <div class="card yellow"><div class="lbl">🔋 Battery</div><div class="val">${soc}</div><div class="sub">${batSub}</div></div>
+  <div class="card">
+    <div class="lbl"><span class="mdi mdi-transmission-tower"></span> Rete</div>
+    <div class="val">${grid}</div>
+  </div>
+  <div class="card green">
+    <div class="lbl"><span class="mdi mdi-solar-power-variant"></span> Fotovoltaico</div>
+    <div class="lbl2">MPPT Tracker N°1</div>
+    <div class="val">${pvPower}</div>
+  </div>
+  <div class="card orange">
+    <div class="lbl"><span class="mdi mdi-home-lightning-bolt-outline"></span> Consumi Casa</div>
+    <div class="val">${essLoads}</div>
+  </div>
+  <div class="card yellow">
+    <div class="lbl">🔋 Batteria</div>
+    <div class="val">${soc}</div>
+    <div class="bat-bar-wrap"><div class="bat-bar-fill" style="width:${socPct}%;background:${batColor};"></div></div>
+    <div class="sub" style="color:${batDirColor};">${batSub}</div>
+  </div>
 </div>
 <div class="ts">Aggiornato: ${agoString()}</div>
 </body></html>`;
