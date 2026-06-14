@@ -26,12 +26,11 @@ services:
     depends_on:
       - mediamtx
     environment:
-      VRM_URL:         "https://vrm.victronenergy.com/installation/475708/share/102cf9ce"
       RTSP_URL:        "rtsp://mediamtx:8554/victron"
       FPS:             "15"
       WIDTH:           "1280"
       HEIGHT:          "800"
-      WAIT_AFTER_LOAD: "15000"
+      VRM_SITE_ID:     "475708"
     shm_size: "256mb"
     volumes:
       - /TRE_TB/media:/media
