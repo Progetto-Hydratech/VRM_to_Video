@@ -84,35 +84,44 @@ async function scrapeDashboard(page) {
   });
 }
 
+let lastScrapeTime = Date.now();
+
+function agoString() {
+  const sec = Math.round((Date.now() - lastScrapeTime) / 1000);
+  if (sec < 60) return sec + 's fa';
+  return Math.round(sec / 60) + 'm fa';
+}
+
 function makeHTML(data) {
-  const { grid, essLoads, pvPower, soc, batPower, batDir, time } = data;
+  const { grid, essLoads, pvPower, soc, batPower, batDir } = data;
   const fmt = v => v !== null && v !== undefined ? v : '--';
-  const batText = soc ? `${soc}  ·  ${batDir || ''} ${batPower || ''}`.trim() : '--';
+  const batSub = [batDir, batPower].filter(Boolean).join(' ');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { width:${WIDTH}px; height:${HEIGHT}px; background:#0d1117; color:#e6edf3;
   font-family:'Segoe UI',system-ui,sans-serif;
-  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:28px; }
-h1 { font-size:26px; color:#58a6ff; font-weight:600; }
-.grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; width:88%; }
-.card { background:#161b22; border-radius:14px; padding:26px 30px; border-left:5px solid #58a6ff; }
-.card.green { border-color:#3fb950; }
+  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; }
+h1 { font-size:30px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; width:94%; height:72%; }
+.card { background:#161b22; border-radius:16px; padding:32px 36px; border-left:6px solid #58a6ff;
+  display:flex; flex-direction:column; justify-content:center; }
+.card.green  { border-color:#3fb950; }
 .card.orange { border-color:#f78166; }
 .card.yellow { border-color:#d29922; }
-.lbl { font-size:13px; color:#8b949e; text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
-.val { font-size:44px; font-weight:700; color:#fff; line-height:1; }
-.sub { font-size:15px; color:#8b949e; margin-top:8px; }
-.ts  { font-size:12px; color:#484f58; position:absolute; bottom:14px; right:20px; }
+.lbl { font-size:15px; color:#8b949e; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
+.val { font-size:72px; font-weight:800; color:#fff; line-height:1; }
+.sub { font-size:18px; color:#8b949e; margin-top:12px; }
+.ts  { font-size:13px; color:#484f58; }
 </style></head><body>
 <h1>🏠 Casa Mia — Victron VRM</h1>
 <div class="grid">
   <div class="card"><div class="lbl">⚡ Grid</div><div class="val">${fmt(grid)}</div></div>
   <div class="card green"><div class="lbl">☀️ PV Charger</div><div class="val">${fmt(pvPower)}</div></div>
   <div class="card orange"><div class="lbl">🔌 Essential Loads</div><div class="val">${fmt(essLoads)}</div></div>
-  <div class="card yellow"><div class="lbl">🔋 Battery</div><div class="val">${fmt(soc)}</div><div class="sub">${batText}</div></div>
+  <div class="card yellow"><div class="lbl">🔋 Battery</div><div class="val">${fmt(soc)}</div><div class="sub">${batSub}</div></div>
 </div>
-<div class="ts">Updated: ${time || new Date().toLocaleTimeString('it-IT')}</div>
+<div class="ts">Aggiornato: ${agoString()}</div>
 </body></html>`;
 }
 
@@ -227,6 +236,7 @@ startFfmpeg();
           const raw = await scrapeDashboard(dashPage);
           values = parseValues(raw.lines);
           lastScrape = Date.now();
+          lastScrapeTime = Date.now();
           log('scrape', `grid=${values.grid} ess=${values.essLoads} pv=${values.pvPower} soc=${values.soc}`);
         } catch(e) { err('scrape', e.message); }
       }
