@@ -11,7 +11,7 @@ services:
       - "8888:8888"
       - "8889:8889"
     environment:
-      MTX_LOGLEVEL: debug
+      MTX_LOGLEVEL: info
       MTX_LOGDESTINATIONS: stdout
       MTX_RTSPADDRESS: :8554
       MTX_PATHS_VICTRON_READANYUSER: "true"
@@ -33,3 +33,19 @@ services:
     shm_size: "256mb"
     volumes:
       - /TRE_TB/media:/media
+
+  # ── ONVIF server — makes the stream discoverable by UniFi Protect ─────────
+  onvif:
+    image: thinkxl/onvif-camera-mock:latest
+    container_name: vrm-onvif
+    restart: unless-stopped
+    network_mode: host          # WS-Discovery uses multicast UDP — needs host network
+    environment:
+      ONVIF_SERVER_IP:   "192.168.1.112"   # IP del server visibile da UniFi
+      RTSP_SERVER_IP:    "192.168.1.112"
+      RTSP_PORT:         "8554"
+      RTSP_PATH:         "victron"
+      ONVIF_PORT:        "8080"
+      DEVICE_NAME:       "Victron VRM"
+    depends_on:
+      - mediamtx
