@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer-core');
 const { spawn } = require('child_process');
+const fs = require('fs');
 
-// ── Config from environment variables ──────────────────────────────────────
 const VRM_URL        = process.env.VRM_URL        || 'https://vrm.victronenergy.com/installation/475708/share/102cf9ce';
 const RTSP_URL       = process.env.RTSP_URL        || 'rtsp://mediamtx:8554/victron';
 const INTERVAL_MS    = parseInt(process.env.INTERVAL_MS    || '5000');
@@ -22,7 +22,6 @@ log('vrm-to-video', `  Interval:  ${INTERVAL_MS}ms  (${fps} fps)`);
 log('vrm-to-video', `  Viewport:  ${WIDTH}x${HEIGHT}`);
 log('vrm-to-video', `  Wait:      ${WAIT_AFTER_LOAD}ms`);
 
-// ── ffmpeg ─────────────────────────────────────────────────────────────────
 const ffmpegArgs = [
   '-f', 'image2pipe', '-framerate', fps, '-i', 'pipe:0',
   '-vf', `scale=${WIDTH}:${HEIGHT}`,
@@ -38,16 +37,13 @@ let frameCount = 0;
 function startFfmpeg() {
   log('ffmpeg', `spawning: ffmpeg ${ffmpegArgs.join(' ')}`);
   ffmpeg = spawn('ffmpeg', ffmpegArgs, { stdio: ['pipe', 'inherit', 'inherit'] });
-
   ffmpeg.on('error', (e) => err('ffmpeg', e.message));
-
   ffmpeg.on('exit', (code, signal) => {
     log('ffmpeg', `exited code=${code} signal=${signal} — restarting in 3s`);
     ffmpegReady = false;
     frameCount = 0;
     setTimeout(startFfmpeg, 3000);
   });
-
   setTimeout(() => {
     ffmpegReady = true;
     log('ffmpeg', 'ready — accepting frames');
@@ -56,7 +52,6 @@ function startFfmpeg() {
 
 startFfmpeg();
 
-// ── Main loop ─────────────────────────────────────────────────────────────
 (async () => {
   let browser;
 
@@ -69,14 +64,20 @@ startFfmpeg();
           headless: true,
           args: [
             '--no-sandbox', '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage', '--disable-gpu',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--use-gl=swiftshader',          // software WebGL
+            '--enable-webgl',
+            '--ignore-gpu-blocklist',
             `--window-size=${WIDTH},${HEIGHT}`,
+            '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           ],
         });
 
         const pages = await browser.pages();
         const page = pages[0] || await browser.newPage();
         await page.setViewport({ width: WIDTH, height: HEIGHT });
+        await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
         log('puppeteer', `navigating to ${VRM_URL}`);
         await page.goto(VRM_URL, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -85,16 +86,17 @@ startFfmpeg();
         const title = await page.title();
         log('puppeteer', `landed on: ${finalUrl}`);
         log('puppeteer', `page title: "${title}"`);
-
         if (finalUrl !== VRM_URL) {
-          log('puppeteer', `WARNING: redirect detected! Expected ${VRM_URL}`);
+          log('puppeteer', `WARNING: redirect detected!`);
         }
 
         log('puppeteer', `waiting ${WAIT_AFTER_LOAD}ms for JS render...`);
         await new Promise(r => setTimeout(r, WAIT_AFTER_LOAD));
 
-        const afterTitle = await page.title();
-        log('puppeteer', `title after wait: "${afterTitle}"`);
+        // Save debug screenshot on first load
+        const debugPng = await page.screenshot({ type: 'png', fullPage: false });
+        fs.writeFileSync('/tmp/debug_screenshot.png', debugPng);
+        log('puppeteer', `debug screenshot saved to /tmp/debug_screenshot.png (${(debugPng.length/1024).toFixed(1)} KB)`);
 
         browser._page = page;
         log('puppeteer', 'ready, starting capture loop');
