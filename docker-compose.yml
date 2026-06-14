@@ -18,7 +18,9 @@ services:
       MTX_PATHS_VICTRON_PUBLISHANYUSER: "true"
 
   screenshotter:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: vrm-screenshotter
     restart: unless-stopped
     depends_on:
@@ -34,18 +36,19 @@ services:
     volumes:
       - /TRE_TB/media:/media
 
-  # ── ONVIF server — makes the stream discoverable by UniFi Protect ─────────
   onvif:
-    image: thinkxl/onvif-camera-mock:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.onvif
     container_name: vrm-onvif
     restart: unless-stopped
-    network_mode: host          # WS-Discovery uses multicast UDP — needs host network
+    network_mode: host
     environment:
-      ONVIF_SERVER_IP:   "192.168.1.112"   # IP del server visibile da UniFi
-      RTSP_SERVER_IP:    "192.168.1.112"
-      RTSP_PORT:         "8554"
-      RTSP_PATH:         "victron"
-      ONVIF_PORT:        "8080"
-      DEVICE_NAME:       "Victron VRM"
+      ONVIF_SERVER_IP: "192.168.1.112"
+      RTSP_SERVER_IP:  "192.168.1.112"
+      RTSP_PORT:       "8554"
+      RTSP_PATH:       "victron"
+      ONVIF_PORT:      "8080"
+      DEVICE_NAME:     "Victron VRM"
     depends_on:
       - mediamtx
