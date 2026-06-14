@@ -83,7 +83,7 @@ async function fetchTelemetry(token) {
   if (records.length > 0 && !fetchTelemetry._logged) {
     fetchTelemetry._logged = true;
     log('api', 'Available attributes:');
-    records.slice(0, 60).forEach(r => log('api', `  [${r.idDataAttribute}] ${r.description}: ${r.rawValue} ${r.unit||''}`));
+    records.forEach(r => log('api', `  [${r.idDataAttribute}] ${r.description}: ${r.rawValue} ${r.unit||''}`));
   }
   if (records.length === 0) {
     log('api-raw', 'RAW response: ' + JSON.stringify(res).slice(0, 500));
