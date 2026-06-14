@@ -3,8 +3,8 @@ import os, socket, struct, threading, textwrap, time, hashlib, uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime, timezone
 
-HOST_IP    = os.environ.get('ONVIF_SERVER_IP', '192.168.1.112')
-RTSP_IP    = os.environ.get('RTSP_SERVER_IP',  '192.168.1.112')
+HOST_IP    = os.environ.get('ONVIF_SERVER_IP')
+RTSP_IP    = os.environ.get('RTSP_SERVER_IP')
 RTSP_PORT  = os.environ.get('RTSP_PORT',        '8554')
 RTSP_PATH  = os.environ.get('RTSP_PATH',        'victron')
 ONVIF_PORT = int(os.environ.get('ONVIF_PORT',   '31472'))

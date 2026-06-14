@@ -43,8 +43,8 @@ services:
     restart: unless-stopped
     network_mode: host
     environment:
-      ONVIF_SERVER_IP: "192.168.1.112"
-      RTSP_SERVER_IP:  "192.168.1.112"
+      ONVIF_SERVER_IP: ${HOST_IP}
+      RTSP_SERVER_IP:  ${HOST_IP}
       RTSP_PORT:       "8554"
       RTSP_PATH:       "victron"
       ONVIF_PORT:      "31472"
