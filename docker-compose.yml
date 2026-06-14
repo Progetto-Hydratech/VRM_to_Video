@@ -48,7 +48,7 @@ services:
       RTSP_SERVER_IP:  "192.168.1.112"
       RTSP_PORT:       "8554"
       RTSP_PATH:       "victron"
-      ONVIF_PORT:      "8090"
+      ONVIF_PORT:      "8181"
       DEVICE_NAME:     "Victron VRM"
     depends_on:
       - mediamtx
