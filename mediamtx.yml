@@ -1,0 +1,19 @@
+# mediamtx.yml
+# Minimal config — accepts the ffmpeg push and serves to NVR clients
+
+logLevel: info
+logDestinations: [stdout]
+
+# RTSP server
+rtspAddress: :8554
+
+# No auth needed (internal stack — NVR is on LAN)
+authMethod: ""
+
+# Paths
+paths:
+  victron:
+    # Allow anyone to read this stream
+    readAnyUser: true
+    # Allow anyone to publish (only ffmpeg from inside the stack will)
+    publishAnyUser: true

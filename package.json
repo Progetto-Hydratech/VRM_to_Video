@@ -1,0 +1,12 @@
+{
+  "name": "vrm-to-video",
+  "version": "1.0.0",
+  "description": "Stream a VRM Victron dashboard page as RTSP video feed",
+  "main": "screenshotter.js",
+  "scripts": {
+    "start": "node screenshotter.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^22.0.0"
+  }
+}
