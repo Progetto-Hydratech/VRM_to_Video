@@ -174,7 +174,7 @@ class ONVIFHandler(BaseHTTPRequestHandler):
     <tt:VideoEncoderConfiguration token="vec1">
       <tt:Name>H264</tt:Name>
       <tt:Encoding>H264</tt:Encoding>
-      <tt:Resolution><tt:Width>1280</tt:Width><tt:Height>800</tt:Height></tt:Resolution>
+      <tt:Resolution><tt:Width>1280</tt:Width><tt:Height>720</tt:Height></tt:Resolution>
       <tt:RateControl><tt:FrameRateLimit>{ONVIF_FPS}</tt:FrameRateLimit><tt:EncodingInterval>1</tt:EncodingInterval><tt:BitrateLimit>4096</tt:BitrateLimit></tt:RateControl>
     </tt:VideoEncoderConfiguration>
   </trt:Profiles>

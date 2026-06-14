@@ -28,7 +28,7 @@ services:
     environment:
       RTSP_URL:  "rtsp://mediamtx:8554/victron"
       WIDTH:     "1280"
-      HEIGHT:    "800"
+      HEIGHT:    "720"
       VRM_TOKEN: ${VRM_TOKEN}
       FPS:       ${FPS:-5}
     shm_size: "256mb"
