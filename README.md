@@ -112,7 +112,16 @@ http://HOST_IP:8888/victron
 3. Navigate to the **UniFi Devices** page — the VRM camera should appear in the list ready for adoption
 4. Select **Click to Adopt**
 5. In the popup, enter the credentials: Username `admin` — Password `admin`
-6. If the camera does not appear automatically, use **Advanced Adoption**: click the help icon (top left) → **Advanced Adoption** → enter `HOST_IP` and port `31472` manually
+
+If the camera does **not** appear automatically, use **Advanced Adoption**:
+
+**Step 1** — In the UniFi Devices page, click the **?** (help) button in the top-left corner of the page:
+
+![UniFi help button](docs/unifi_step1_help_button.png)
+
+**Step 2** — Click **Advanced Adoption**, then enter your `HOST_IP` as the camera IP and `31472` as the port:
+
+![Advanced Adoption](docs/unifi_step2_advanced_adoption.png)
 
 > **Troubleshooting**: if adoption fails, make sure the machine running Docker is on the **same network subnet** as your UniFi NVR, and that port `31472` (TCP) and `3702` (UDP) are not blocked by a firewall.
 
