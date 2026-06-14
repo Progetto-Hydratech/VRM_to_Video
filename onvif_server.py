@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-import os, socket, struct, threading, textwrap, time, hashlib, base64, re
+import os, socket, struct, threading, textwrap, time, hashlib, uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from uuid import uuid4
 
 HOST_IP    = os.environ.get('ONVIF_SERVER_IP', '192.168.1.112')
 RTSP_IP    = os.environ.get('RTSP_SERVER_IP',  '192.168.1.112')
@@ -11,7 +10,7 @@ ONVIF_PORT = int(os.environ.get('ONVIF_PORT',   '31472'))
 DEVICE_NAME= os.environ.get('DEVICE_NAME',      'Victron VRM')
 ONVIF_USER = os.environ.get('ONVIF_USER',       'admin')
 ONVIF_PASS = os.environ.get('ONVIF_PASS',       'admin')
-DEVICE_UUID= str(uuid4(int=int(hashlib.md5(HOST_IP.encode()).hexdigest(), 16)))
+DEVICE_UUID= str(uuid.UUID(int=int(hashlib.md5(HOST_IP.encode()).hexdigest(), 16)))
 
 RTSP_URL   = f"rtsp://{RTSP_IP}:{RTSP_PORT}/{RTSP_PATH}"
 ONVIF_URL  = f"http://{HOST_IP}:{ONVIF_PORT}/onvif/device_service"
