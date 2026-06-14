@@ -107,10 +107,14 @@ http://HOST_IP:8888/victron
 
 ### 5. Add to UniFi Protect
 
-1. UniFi Protect → **Add Device** → **Add ONVIF Camera**
-2. IP: `HOST_IP` — Port: `31472`
-3. Username: `admin` — Password: `admin`
-4. UniFi will discover the stream and add it to your camera grid automatically
+1. Open **UniFi Protect** and go to **Settings → System**
+2. Enable **Discover Third-Party Cameras**
+3. Navigate to the **UniFi Devices** page — the VRM camera should appear in the list ready for adoption
+4. Select **Click to Adopt**
+5. In the popup, enter the credentials: Username `admin` — Password `admin`
+6. If the camera does not appear automatically, use **Advanced Adoption**: click the help icon (top left) → **Advanced Adoption** → enter `HOST_IP` and port `31472` manually
+
+> **Troubleshooting**: if adoption fails, make sure the machine running Docker is on the **same network subnet** as your UniFi NVR, and that port `31472` (TCP) and `3702` (UDP) are not blocked by a firewall.
 
 ---
 
