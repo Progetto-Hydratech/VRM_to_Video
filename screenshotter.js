@@ -6,7 +6,7 @@ const OTPAuth = require('otpauth');
 
 const VRM_URL        = process.env.VRM_URL         || 'https://vrm.victronenergy.com/installation/475708/share/102cf9ce';
 const RTSP_URL       = process.env.RTSP_URL         || 'rtsp://mediamtx:8554/victron';
-const INTERVAL_MS    = parseInt(process.env.INTERVAL_MS    || '200');
+const FPS           = parseFloat(process.env.FPS           || '15');
 const WIDTH          = parseInt(process.env.WIDTH          || '1280');
 const HEIGHT         = parseInt(process.env.HEIGHT         || '800');
 const WAIT_AFTER_LOAD= parseInt(process.env.WAIT_AFTER_LOAD|| '15000');
@@ -15,7 +15,8 @@ const VRM_PASSWORD   = process.env.VRM_PASSWORD;
 const VRM_TOTP_SECRET= process.env.VRM_TOTP_SECRET;
 
 const DEBUG_PATH = '/media/debug_screenshot.png';
-const fps = (1000 / INTERVAL_MS).toFixed(4);
+const INTERVAL_MS    = Math.round(1000 / FPS);
+const fps = FPS.toFixed(4);
 
 function ts()  { return new Date().toISOString(); }
 function log(tag, msg) { console.log(`${ts()} [${tag}] ${msg}`); }
