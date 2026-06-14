@@ -144,13 +144,13 @@ body { width:${WIDTH}px; height:${HEIGHT}px; background:#0d1117; color:#e6edf3;
 .card.green  { border-color:#3fb950; }
 .card.orange { border-color:#f78166; }
 .card.yellow { border-color:#d29922; }
-.lbl { font-size:14px; color:#58a6ff; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; font-weight:700;
-  display:flex; align-items:center; gap:8px; }
+.lbl { font-size:28px; color:#58a6ff; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; font-weight:700;
+  display:flex; align-items:center; gap:10px; }
 .card.green  .lbl { color:#3fb950; }
 .card.orange .lbl { color:#f78166; }
 .card.yellow .lbl { color:#d29922; }
-.lbl .mdi { font-size:20px; }
-.lbl2 { font-size:11px; color:#484f58; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:600; }
+.lbl .mdi { font-size:32px; }
+.lbl2 { font-size:16px; color:#484f58; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:600; }
 .val { font-size:64px; font-weight:800; color:#fff; line-height:1; }
 .sub { font-size:18px; margin-top:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; }
 .bat-bar-wrap { margin-top:12px; background:#0d1117; border-radius:8px; height:12px; width:100%; overflow:hidden; }
