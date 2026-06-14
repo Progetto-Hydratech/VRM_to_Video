@@ -117,29 +117,41 @@ h1 { font-size:26px; color:#58a6ff; font-weight:600; }
 }
 
 function parseValues(lines) {
-  // Log all lines so we can see what's on the page
   console.log('[scrape] lines:', JSON.stringify(lines.slice(0, 40)));
 
-  const find = (keywords) => {
+  const findNext = (keywords) => {
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i].toLowerCase();
-      if (keywords.some(k => l.includes(k))) {
-        // Return next non-label line that looks like a value
-        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-          if (/[\d\-]/.test(lines[j])) return lines[j];
+      if (keywords.some(k => l === k || l.startsWith(k))) {
+        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+          if (/[\d]/.test(lines[j])) return lines[j];
         }
       }
     }
     return null;
   };
 
+  // Battery: look for "Charging" or "Discharging" label
+  // Lines layout: "Charging"/"Discharging" → "311 W" → "81.0 %"
+  let batDir = null, batPower = null, soc = null;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i].toLowerCase();
+    if (l === 'charging' || l === 'discharging') {
+      batDir = lines[i];
+      if (i + 1 < lines.length && /\d/.test(lines[i+1])) batPower = lines[i+1];
+      if (i + 2 < lines.length && lines[i+2].includes('%')) soc = lines[i+2];
+      else if (i + 2 < lines.length && /\d/.test(lines[i+2])) soc = lines[i+2];
+      break;
+    }
+  }
+
   return {
-    grid:     find(['grid']),
-    essLoads: find(['essential load', 'essential']),
-    pvPower:  find(['pv charger', 'pv']),
-    soc:      find(['charging', 'soc', 'battery']),
-    batPower: null,
-    batDir:   null,
+    grid:     findNext(['grid']),
+    essLoads: findNext(['essential loads', 'essential']),
+    pvPower:  findNext(['pv charger']),
+    soc,
+    batPower,
+    batDir,
     time:     new Date().toLocaleTimeString('it-IT'),
   };
 }
