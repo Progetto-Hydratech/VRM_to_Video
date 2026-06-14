@@ -1,20 +1,70 @@
 # VRM to Video
 
-Stream your Victron VRM energy dashboard as an RTSP H.264 camera feed — compatible with UniFi Protect and any ONVIF NVR.
+Turn your Victron Energy system into a virtual ONVIF camera — stream a live energy dashboard directly into UniFi Protect (or any ONVIF-compatible NVR) as if it were a real IP camera.
 
 ![Dashboard Preview](screenshot.jpg)
 
-## How it works
+---
+
+## What is this?
+
+If you have a Victron Energy installation (Multiplus, MPPT solar charger, Pylontech batteries, etc.) connected to VRM, this project lets you visualize your energy data as a **live video feed** inside your NVR's camera grid — no extra screens, no dashboards to open, just a tile in your existing security camera view.
+
+Every few seconds the system fetches live data from the **Victron VRM API**, renders a clean HTML dashboard, encodes it as H.264 video via ffmpeg, and serves it over RTSP. An ONVIF server makes the stream discoverable by UniFi Protect automatically.
+
+---
+
+## Pipeline
 
 ```
-Victron VRM API → HTML render (Puppeteer) → PNG → ffmpeg H.264 → mediamtx RTSP → ONVIF server → UniFi Protect
+Victron VRM API
+      │  (live data, every 5s)
+      ▼
+ screenshotter.js
+  ├─ fetches telemetry (grid, PV, battery, loads, temperature)
+  ├─ renders HTML dashboard via headless Chromium (Puppeteer)
+  └─ pipes PNG frames to ffmpeg
+      │
+      ▼
+   ffmpeg
+  ├─ H.264 baseline profile, level 3.1
+  ├─ 1280×720 @ 5fps
+  └─ pushes RTSP stream to mediamtx
+      │
+      ▼
+  mediamtx          ← RTSP server (also exposes WebRTC)
+      │
+      ▼
+  ONVIF server      ← makes the camera discoverable on the LAN
+      │
+      ▼
+ UniFi Protect / any ONVIF NVR
 ```
+
+---
+
+## Dashboard cards
+
+| Card | Victron data source | VRM attribute ID |
+|------|---------------------|-----------------|
+| **Rete** (Grid power) | Grid meter L1 — `/Ac/L1/Power` | 379 |
+| **Fotovoltaico** (PV) | MPPT Tracker 1 — `/Pv/0/P` | 802 |
+| **Consumi Casa** (Loads) | VE.Bus output L1 — `/Ac/Out/L1/P` | 29 |
+| **Batteria** (Battery SOC) | Battery Monitor — `/Soc` | 51 |
+| **Battery Power** | System — `/Dc/Battery/Power` | 243 |
+| **Temp. Soffitta** | Temperature sensor — `/Temperature` | 450 |
+
+The battery card shows a colour-coded level bar (green → yellow → red) and displays **In carica** (charging) or **In scarica** (discharging) with the current power flow.
+
+---
 
 ## Requirements
 
-- Docker + Docker Compose
-- A Victron system with VRM access (API token)
-- UniFi Protect or any ONVIF-compatible NVR
+- A machine running **Docker + Docker Compose** on your local network
+- A Victron installation connected to **VRM** with an API token
+- UniFi Protect or any **ONVIF-compatible NVR** (optional — the raw RTSP stream works with VLC too)
+
+---
 
 ## Setup
 
@@ -30,12 +80,12 @@ cd VRM_to_Video
 ```env
 VRM_TOKEN=your_vrm_api_token
 VRM_SITE_ID=your_installation_id
-HOST_IP=192.168.1.x        # IP of the machine running Docker
+HOST_IP=192.168.1.x        # LAN IP of the machine running Docker
 FPS=5
 ```
 
-> **VRM_SITE_ID**: find it in the VRM portal URL — `vrm.victronenergy.com/installation/XXXXXX`  
-> **VRM_TOKEN**: generate it in VRM → Profile → Access Tokens
+> **VRM_SITE_ID**: visible in the VRM portal URL — `vrm.victronenergy.com/installation/XXXXXX`  
+> **VRM_TOKEN**: generate one in VRM → top-right menu → **Access Tokens**
 
 ### 3. Start the stack
 
@@ -43,36 +93,57 @@ FPS=5
 docker compose up -d
 ```
 
-### 4. Add to UniFi Protect
+### 4. Watch the stream (optional test)
 
-1. In UniFi Protect → **Add Device** → **ONVIF Camera**
-2. IP: your `HOST_IP`, Port: `31472`
-3. Username/Password: `admin` / `admin`
+Open in VLC or any RTSP player:
+```
+rtsp://HOST_IP:8554/victron
+```
 
-The stream will appear as a live camera feed.
+Or open the WebRTC viewer in a browser:
+```
+http://HOST_IP:8888/victron
+```
 
-## What's shown on the dashboard
+### 5. Add to UniFi Protect
 
-| Card | Source |
-|------|--------|
-| Rete (Grid) | Grid meter L1 power |
-| Fotovoltaico | MPPT Tracker 1 PV power |
-| Consumi Casa | VE.Bus output power L1 |
-| Batteria | SOC % + charge/discharge state |
-| Temp. Soffitta | Temperature sensor |
+1. UniFi Protect → **Add Device** → **Add ONVIF Camera**
+2. IP: `HOST_IP` — Port: `31472`
+3. Username: `admin` — Password: `admin`
+4. UniFi will discover the stream and add it to your camera grid automatically
+
+---
 
 ## Ports
 
-| Port | Protocol | Use |
-|---|---|---|
-| 8554 | TCP | RTSP — point NVR here |
-| 8888 | TCP | WebRTC viewer (`http://HOST_IP:8888/victron`) |
-| 31472 | TCP | ONVIF device service |
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| `8554` | TCP | RTSP stream — point your NVR here |
+| `8888` | TCP | WebRTC viewer (browser-friendly preview) |
+| `31472` | TCP | ONVIF device service (camera discovery) |
+| `3702` | UDP | WS-Discovery multicast (ONVIF auto-discovery) |
+
+---
 
 ## Stack
 
-| Service | Image |
-|---------|-------|
-| RTSP server | `bluenviron/mediamtx` |
-| Screenshotter + ffmpeg | Custom (Node.js + Chromium) |
-| ONVIF server | Custom (Python) |
+| Service | Technology | Role |
+|---------|-----------|------|
+| `mediamtx` | `bluenviron/mediamtx` | RTSP / WebRTC server |
+| `screenshotter` | Node.js + Chromium + ffmpeg | Fetches VRM data, renders dashboard, encodes H.264 |
+| `onvif` | Python | Exposes an ONVIF-compliant device endpoint for NVR discovery |
+
+---
+
+## Compatibility
+
+Tested with:
+- **UniFi Protect** (UDM Pro / UNVR) — ONVIF auto-discovery
+- **VLC** — direct RTSP playback
+- Victron **Cerbo GX** with MPPT solar charger, Multiplus II, Pylontech battery, and energy meter
+
+---
+
+## License
+
+MIT — free to use, modify and share.
