@@ -11,8 +11,13 @@ services:
       - "8554:8554"      # RTSP  → point your NVR here
       - "8888:8888"      # WebRTC (bonus: watch in browser)
       - "8889:8889"      # WebRTC/WHIP
-    volumes:
-      - ./mediamtx.yml:/mediamtx.yml:ro
+    environment:
+      MTX_LOGLEVEL: info
+      MTX_LOGDESTINATIONS: stdout
+      MTX_RTSPADDRESS: :8554
+      MTX_AUTHMETHOD: ""
+      MTX_PATHS_VICTRON_READANYUSER: "true"
+      MTX_PATHS_VICTRON_PUBLISHANYUSER: "true"
 
   # ── Screenshotter + streamer ───────────────────────────────────────────────
   screenshotter:
@@ -22,11 +27,10 @@ services:
     depends_on:
       - mediamtx
     environment:
-      # ── Customize these ───────────────────────────────────────────────────
       VRM_URL:         "https://vrm.victronenergy.com/installation/475708/embed/d5b455cc"
       RTSP_URL:        "rtsp://mediamtx:8554/victron"
-      INTERVAL_MS:     "5000"    # 5000 = 1 frame every 5 sec | 1000 = 1 fps
+      INTERVAL_MS:     "5000"
       WIDTH:           "1280"
       HEIGHT:          "800"
-      WAIT_AFTER_LOAD: "8000"    # ms to wait for VRM JS to render on first load
-    shm_size: "256mb"            # Chromium needs shared memory
+      WAIT_AFTER_LOAD: "8000"
+    shm_size: "256mb"
