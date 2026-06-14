@@ -158,6 +158,8 @@ const ffmpegArgs = [
   '-pix_fmt', 'yuv420p',
   '-g', '50',
   '-b:v', '2M', '-maxrate', '2M', '-bufsize', '4M',
+  '-x264-params', 'slices=1',
+  '-threads', '1',
   '-f', 'rtsp', '-rtsp_transport', 'tcp', RTSP_URL,
 ];
 let ffmpeg = null, ffmpegReady = false, frameCount = 0;
