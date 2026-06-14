@@ -2,7 +2,6 @@ version: "3.8"
 
 services:
 
-  # ── RTSP server ───────────────────────────────────────────────────────────
   mediamtx:
     image: bluenviron/mediamtx:latest
     container_name: vrm-mediamtx
@@ -18,7 +17,6 @@ services:
       MTX_PATHS_VICTRON_READANYUSER: "true"
       MTX_PATHS_VICTRON_PUBLISHANYUSER: "true"
 
-  # ── Screenshotter + streamer ───────────────────────────────────────────────
   screenshotter:
     build: .
     container_name: vrm-screenshotter
@@ -26,7 +24,7 @@ services:
     depends_on:
       - mediamtx
     environment:
-      VRM_URL:         "https://vrm.victronenergy.com/installation/475708/dashboard"
+      VRM_URL:         "https://vrm.victronenergy.com/installation/475708/share/102cf9ce"
       RTSP_URL:        "rtsp://mediamtx:8554/victron"
       INTERVAL_MS:     "5000"
       WIDTH:           "1280"
