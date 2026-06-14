@@ -110,14 +110,23 @@ async function fetchTelemetry(token) {
     if (!isNaN(v)) batDir = v >= 0 ? 'Charging' : 'Discharging';
   }
 
-  const fmt = (r) => r ? `${r.value} ${r.unit}`.trim() : '--';
+  const fmtW = (r) => {
+    if (!r) return '--';
+    const v = parseFloat(r.value);
+    return isNaN(v) ? '--' : `${Math.round(v)} W`;
+  };
+  const fmtPct = (r) => {
+    if (!r) return '--';
+    const v = parseFloat(r.value);
+    return isNaN(v) ? '--' : `${Math.round(v)} %`;
+  };
 
   return {
-    grid:     fmt(grid),
-    essLoads: fmt(essLoad),
-    pvPower:  fmt(pv),
-    soc:      soc ? `${soc.value} ${soc.unit}`.trim() : '--',
-    batPower: batPow ? `${Math.abs(parseFloat(batPow.value))} ${batPow.unit}`.trim() : null,
+    grid:     fmtW(grid),
+    essLoads: fmtW(essLoad),
+    pvPower:  fmtW(pv),
+    soc:      fmtPct(soc),
+    batPower: batPow ? `${Math.round(Math.abs(parseFloat(batPow.value)))} W` : null,
     batDir,
   };
 }
