@@ -79,54 +79,33 @@ async function fetchTelemetry(token) {
   const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/diagnostics`, null, token);
   const records = Array.isArray(res?.records) ? res.records : (res?.records?.data || []);
 
-  log('api-raw', `total records: ${records.length}`);
-  if (records.length > 0 && !fetchTelemetry._logged) {
-    fetchTelemetry._logged = true;
-    log('api', 'Available attributes:');
-    records.forEach(r => log('api', `  [${r.idDataAttribute}] ${r.description}: ${r.rawValue} ${r.unit||''}`));
-  }
   if (records.length === 0) {
-    log('api-raw', 'RAW response: ' + JSON.stringify(res).slice(0, 500));
-  }
-
-  const find = (keywords) => {
-    for (const kw of keywords) {
-      const r = records.find(r => r.description && r.description.toLowerCase().includes(kw.toLowerCase()));
-      if (r) return { value: r.rawValue, unit: r.unit || '', raw: r };
-    }
+    log('api-raw', 'empty response: ' + JSON.stringify(res).slice(0, 300));
     return null;
-  };
-
-  const grid    = find(['grid', 'ac input', 'mains']);
-  const essLoad = find(['ac consumption', 'essential loads', 'ac loads', 'load']);
-  const pv      = find(['pv power', 'solar charger power', 'pv - ac', 'solar power', 'pv charger']);
-  const soc     = find(['state of charge', 'battery soc', 'soc']);
-  const batPow  = find(['battery power', 'battery current']);
-
-  // Determine charging/discharging from battery power sign
-  let batDir = null;
-  if (batPow) {
-    const v = parseFloat(batPow.value);
-    if (!isNaN(v)) batDir = v >= 0 ? 'Charging' : 'Discharging';
   }
 
-  const fmtW = (r) => {
-    if (!r) return '--';
-    const v = parseFloat(r.value);
-    return isNaN(v) ? '--' : `${Math.round(v)} W`;
-  };
-  const fmtPct = (r) => {
-    if (!r) return '--';
-    const v = parseFloat(r.value);
-    return isNaN(v) ? '--' : `${Math.round(v)} %`;
-  };
+  // Lookup by exact attribute ID (more reliable than keyword matching)
+  const byId = {};
+  records.forEach(r => { byId[r.idDataAttribute] = r; });
+
+  const getVal = (id) => byId[id]?.rawValue ?? null;
+
+  const gridW    = parseFloat(getVal(379));  // Grid L1 - Power (from grid meter)
+  const essW     = parseFloat(getVal(567));  // AC Consumption on Output L1 (essential loads)
+  const pvW      = parseFloat(getVal(442));  // PV power (actual current power from MPPT)
+  const soc      = parseFloat(getVal(144));  // Battery SOC %
+  const batW     = parseFloat(getVal(243));  // Battery Power (positive=charging, negative=discharging)
+
+  const batDir   = !isNaN(batW) ? (batW >= 0 ? 'Charging' : 'Discharging') : null;
+  const fmtW = (v) => isNaN(v) ? '--' : `${Math.round(v)} W`;
+  const fmtPct = (v) => isNaN(v) ? '--' : `${Math.round(v)} %`;
 
   return {
-    grid:     fmtW(grid),
-    essLoads: fmtW(essLoad),
-    pvPower:  fmtW(pv),
+    grid:     fmtW(gridW),
+    essLoads: fmtW(essW),
+    pvPower:  fmtW(pvW),
     soc:      fmtPct(soc),
-    batPower: batPow ? `${Math.round(Math.abs(parseFloat(batPow.value)))} W` : null,
+    batPower: !isNaN(batW) ? `${Math.round(Math.abs(batW))} W` : null,
     batDir,
   };
 }
@@ -222,9 +201,12 @@ startFfmpeg();
       // Fetch telemetry from API
       if (Date.now() - lastFetch > FETCH_INTERVAL) {
         try {
-          values = await fetchTelemetry(authToken);
-          lastFetch = Date.now();
-          lastScrapeTime = Date.now();
+          const fetched = await fetchTelemetry(authToken);
+          if (fetched) {
+            values = fetched;
+            lastFetch = Date.now();
+            lastScrapeTime = Date.now();
+          }
           log('api', `grid=${values.grid} ess=${values.essLoads} pv=${values.pvPower} soc=${values.soc}`);
         } catch(e) {
           err('api', e.message);
