@@ -91,14 +91,16 @@ async function fetchTelemetry(token) {
   const getVal = (id) => byId[id]?.rawValue ?? null;
 
   const gridW    = parseFloat(getVal(379));
-  const essW     = parseFloat(getVal(567));
-  const pvW      = parseFloat(getVal(442));
-  const soc      = parseFloat(getVal(144));
+  const essW     = parseFloat(getVal(29));
+  const pvW      = parseFloat(getVal(802));
+  const soc      = parseFloat(getVal(51));
   const batW     = parseFloat(getVal(243));
+  const tempC    = parseFloat(getVal(450));
 
   const batDir   = !isNaN(batW) ? (batW >= 0 ? 'Charging' : 'Discharging') : null;
   const fmtW = (v) => isNaN(v) ? '--' : `${Math.round(v)} W`;
   const fmtPct = (v) => isNaN(v) ? '--' : `${Math.round(v)} %`;
+  const fmtTemp = (v) => isNaN(v) ? '--' : `${v.toFixed(1)} °C`;
 
   return {
     grid:     fmtW(gridW),
@@ -107,20 +109,25 @@ async function fetchTelemetry(token) {
     soc:      fmtPct(soc),
     batPower: !isNaN(batW) ? `${Math.round(Math.abs(batW))} W` : null,
     batDir,
+    temp:     fmtTemp(tempC),
   };
 }
 
 // ── HTML render ────────────────────────────────────────────────────────────
 function makeHTML(data) {
-  const { grid, essLoads, pvPower, soc, batPower, batDir } = data;
+  const { grid, essLoads, pvPower, soc, batPower, batDir, temp } = data;
   const batSub = [batDir, batPower].filter(Boolean).join(' ');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { width:${WIDTH}px; height:${HEIGHT}px; background:#0d1117; color:#e6edf3;
   font-family:'Segoe UI',system-ui,sans-serif;
-  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px; }
-h1 { font-size:30px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
+  display:flex; flex-direction:column; justify-content:center; align-items:center; gap:16px; }
+.header { width:94%; display:flex; align-items:center; justify-content:space-between; }
+h1 { font-size:28px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
+.temp-badge { background:#161b22; border:2px solid #8b949e; border-radius:12px; padding:8px 18px;
+  font-size:20px; font-weight:700; color:#8b949e; }
+.temp-badge span { font-size:13px; display:block; color:#484f58; text-transform:uppercase; letter-spacing:1px; }
 .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; width:94%; height:72%; }
 .card { background:#161b22; border-radius:16px; padding:32px 36px; border-left:6px solid #58a6ff;
   display:flex; flex-direction:column; justify-content:center; }
@@ -135,11 +142,14 @@ h1 { font-size:30px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
 .sub { font-size:22px; color:#3fb950; margin-top:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
 .ts  { font-size:13px; color:#484f58; }
 </style></head><body>
-<h1>🏠 Casa Mia — Victron VRM</h1>
+<div class="header">
+  <h1>🏠 Casa Mia — Victron VRM</h1>
+  <div class="temp-badge"><span>Temp. Soffitta</span>${temp}</div>
+</div>
 <div class="grid">
   <div class="card"><div class="lbl">⚡ Grid</div><div class="val">${grid}</div></div>
-  <div class="card green"><div class="lbl">☀️ PV Charger</div><div class="val">${pvPower}</div></div>
-  <div class="card orange"><div class="lbl">🔌 Essential Loads</div><div class="val">${essLoads}</div></div>
+  <div class="card green"><div class="lbl">☀️ MPPT N°1</div><div class="val">${pvPower}</div></div>
+  <div class="card orange"><div class="lbl">🔌 Output Power</div><div class="val">${essLoads}</div></div>
   <div class="card yellow"><div class="lbl">🔋 Battery</div><div class="val">${soc}</div><div class="sub">${batSub}</div></div>
 </div>
 <div class="ts">Aggiornato: ${agoString()}</div>
