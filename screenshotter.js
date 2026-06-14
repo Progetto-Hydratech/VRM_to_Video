@@ -11,6 +11,7 @@ const HEIGHT          = parseInt(process.env.HEIGHT || '800');
 const INTERVAL_MS     = Math.round(1000 / FPS);
 const FETCH_INTERVAL  = parseInt(process.env.FETCH_INTERVAL || '15000');
 const SITE_ID         = process.env.VRM_SITE_ID    || '475708';
+const VRM_TOKEN       = process.env.VRM_TOKEN;
 const VRM_USERNAME    = process.env.VRM_USERNAME;
 const VRM_PASSWORD    = process.env.VRM_PASSWORD;
 const VRM_TOTP_SECRET = process.env.VRM_TOTP_SECRET;
@@ -53,6 +54,10 @@ function apiRequest(method, path, body, token) {
 
 // ── VRM Login ──────────────────────────────────────────────────────────────
 async function vrmLogin() {
+  if (VRM_TOKEN) {
+    log('auth', 'Using static access token');
+    return VRM_TOKEN;
+  }
   log('auth', `Logging in as ${VRM_USERNAME}...`);
   const res1 = await apiRequest('POST', '/v2/auth/login', { username: VRM_USERNAME, password: VRM_PASSWORD });
   if (res1.verification_mode === 'totp') {
@@ -195,8 +200,8 @@ startFfmpeg();
         log('puppeteer', 'render browser ready');
       }
 
-      // Refresh auth token if needed (every 23h)
-      if (!authToken || Date.now() > tokenExpiry) {
+      // Refresh auth token if needed (every 23h, or never if static token)
+      if (!authToken || (!VRM_TOKEN && Date.now() > tokenExpiry)) {
         authToken = await vrmLogin();
         tokenExpiry = Date.now() + 23 * 3600 * 1000;
       }
