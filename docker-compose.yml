@@ -8,9 +8,9 @@ services:
     container_name: vrm-mediamtx
     restart: unless-stopped
     ports:
-      - "8554:8554"      # RTSP  → point your NVR here
-      - "8888:8888"      # WebRTC / HLS viewer
-      - "8889:8889"      # WebRTC/WHIP
+      - "8554:8554"
+      - "8888:8888"
+      - "8889:8889"
     environment:
       MTX_LOGLEVEL: debug
       MTX_LOGDESTINATIONS: stdout
@@ -26,7 +26,7 @@ services:
     depends_on:
       - mediamtx
     environment:
-      VRM_URL:         "https://vrm.victronenergy.com/installation/475708/share/102cf9ce"
+      VRM_URL:         "https://vrm.victronenergy.com/installation/475708/dashboard"
       RTSP_URL:        "rtsp://mediamtx:8554/victron"
       INTERVAL_MS:     "5000"
       WIDTH:           "1280"
