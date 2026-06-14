@@ -1,90 +1,27 @@
 const puppeteer = require('puppeteer-core');
-const { spawn }  = require('child_process');
-const https      = require('https');
-const fs         = require('fs');
-const OTPAuth    = require('otpauth');
+const { spawn } = require('child_process');
+const https     = require('https');
+const fs        = require('fs');
+const OTPAuth   = require('otpauth');
 
-const RTSP_URL       = process.env.RTSP_URL         || 'rtsp://mediamtx:8554/victron';
-const FPS            = parseFloat(process.env.FPS   || '5');
-const WIDTH          = parseInt(process.env.WIDTH   || '1280');
-const HEIGHT         = parseInt(process.env.HEIGHT  || '800');
-const INTERVAL_MS    = Math.round(1000 / FPS);
-const VRM_URL        = process.env.VRM_URL          || 'https://vrm.victronenergy.com/installation/475708/share/102cf9ce';
-const WAIT_AFTER_LOAD= parseInt(process.env.WAIT_AFTER_LOAD || '15000');
-const VRM_USERNAME   = process.env.VRM_USERNAME;
-const VRM_PASSWORD   = process.env.VRM_PASSWORD;
-const VRM_TOTP_SECRET= process.env.VRM_TOTP_SECRET;
-const DEBUG_PATH     = '/media/debug_screenshot.png';
+const RTSP_URL        = process.env.RTSP_URL       || 'rtsp://mediamtx:8554/victron';
+const FPS             = parseFloat(process.env.FPS || '5');
+const WIDTH           = parseInt(process.env.WIDTH  || '1280');
+const HEIGHT          = parseInt(process.env.HEIGHT || '800');
+const INTERVAL_MS     = Math.round(1000 / FPS);
+const FETCH_INTERVAL  = parseInt(process.env.FETCH_INTERVAL || '15000');
+const SITE_ID         = process.env.VRM_SITE_ID    || '475708';
+const VRM_USERNAME    = process.env.VRM_USERNAME;
+const VRM_PASSWORD    = process.env.VRM_PASSWORD;
+const VRM_TOTP_SECRET = process.env.VRM_TOTP_SECRET;
+const DEBUG_PATH      = '/media/debug_screenshot.png';
 
 const fps = FPS.toFixed(4);
+let lastScrapeTime = Date.now();
 
 function ts()  { return new Date().toISOString(); }
 function log(tag, msg) { console.log(`${ts()} [${tag}] ${msg}`); }
 function err(tag, msg) { console.error(`${ts()} [${tag}] ERROR: ${msg}`); }
-
-// ── VRM login via API ──────────────────────────────────────────────────────
-function apiPost(path, body) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify(body);
-    const opts = {
-      hostname: 'vrmapi.victronenergy.com', path, method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
-    };
-    const req = https.request(opts, (res) => {
-      let raw = ''; res.on('data', d => raw += d);
-      res.on('end', () => { try { resolve(JSON.parse(raw)); } catch(e) { reject(e); } });
-    });
-    req.on('error', reject); req.write(data); req.end();
-  });
-}
-
-async function vrmLogin() {
-  if (!VRM_USERNAME || !VRM_PASSWORD) { log('auth', 'No credentials'); return null; }
-  log('auth', `Logging in as ${VRM_USERNAME}...`);
-  const res1 = await apiPost('/v2/auth/login', { username: VRM_USERNAME, password: VRM_PASSWORD });
-  if (res1.verification_mode === 'totp') {
-    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(VRM_TOTP_SECRET), digits: 6, period: 30 });
-    const code = totp.generate();
-    log('auth', `TOTP: ${code}`);
-    const res2 = await apiPost('/v2/auth/totp', { username: VRM_USERNAME, password: VRM_PASSWORD, token: code });
-    if (!res2.token) throw new Error('2FA failed');
-    log('auth', 'Login + 2FA OK'); return res2.token;
-  }
-  if (!res1.token) throw new Error('Login failed');
-  log('auth', 'Login OK'); return res1.token;
-}
-
-// ── Scrape values from VRM dashboard DOM ───────────────────────────────────
-async function scrapeDashboard(page) {
-  return await page.evaluate(() => {
-    function getText(selector) {
-      const el = document.querySelector(selector);
-      return el ? el.innerText.trim() : null;
-    }
-    function findCardValue(label) {
-      const els = Array.from(document.querySelectorAll('*'));
-      for (const el of els) {
-        if (el.children.length === 0 && el.innerText && el.innerText.toLowerCase().includes(label.toLowerCase())) {
-          // Look for sibling or parent that contains the value
-          const parent = el.closest('[class*="card"], [class*="widget"], [class*="tile"], section, article, div[class]');
-          if (parent) {
-            const valueEl = parent.querySelector('[class*="value"], [class*="power"], [class*="watt"], h1, h2, h3, strong');
-            if (valueEl) return valueEl.innerText.trim();
-          }
-        }
-      }
-      return null;
-    }
-
-    // Try to extract all text content with W and % values
-    const allText = document.body.innerText;
-    const lines = allText.split('\n').map(l => l.trim()).filter(Boolean);
-
-    return { lines, url: window.location.href, title: document.title };
-  });
-}
-
-let lastScrapeTime = Date.now();
 
 function agoString() {
   const sec = Math.round((Date.now() - lastScrapeTime) / 1000);
@@ -92,9 +29,93 @@ function agoString() {
   return Math.round(sec / 60) + 'm fa';
 }
 
+// ── HTTP helpers ───────────────────────────────────────────────────────────
+function apiRequest(method, path, body, token) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const opts = {
+      hostname: 'vrmapi.victronenergy.com', path, method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {}),
+        ...(token ? { 'X-Authorization': `Token ${token}` } : {}),
+      },
+    };
+    const req = https.request(opts, (res) => {
+      let raw = ''; res.on('data', d => raw += d);
+      res.on('end', () => { try { resolve(JSON.parse(raw)); } catch(e) { reject(e); } });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+// ── VRM Login ──────────────────────────────────────────────────────────────
+async function vrmLogin() {
+  log('auth', `Logging in as ${VRM_USERNAME}...`);
+  const res1 = await apiRequest('POST', '/v2/auth/login', { username: VRM_USERNAME, password: VRM_PASSWORD });
+  if (res1.verification_mode === 'totp') {
+    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(VRM_TOTP_SECRET), digits: 6, period: 30 });
+    const code = totp.generate();
+    log('auth', `TOTP: ${code}`);
+    const res2 = await apiRequest('POST', '/v2/auth/totp', { username: VRM_USERNAME, password: VRM_PASSWORD, token: code });
+    if (!res2.token) throw new Error('2FA failed: ' + JSON.stringify(res2));
+    log('auth', 'Login + 2FA OK');
+    return res2.token;
+  }
+  if (!res1.token) throw new Error('Login failed: ' + JSON.stringify(res1));
+  log('auth', 'Login OK');
+  return res1.token;
+}
+
+// ── VRM API fetch ──────────────────────────────────────────────────────────
+async function fetchTelemetry(token) {
+  const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/diagnostics`, null, token);
+  const records = res?.records?.data || [];
+
+  if (records.length > 0 && !fetchTelemetry._logged) {
+    fetchTelemetry._logged = true;
+    log('api', 'Available attributes:');
+    records.forEach(r => log('api', `  [${r.idDataAttribute}] ${r.description}: ${r.rawValue} ${r.unit||''}`));
+  }
+
+  const find = (keywords) => {
+    for (const kw of keywords) {
+      const r = records.find(r => r.description && r.description.toLowerCase().includes(kw.toLowerCase()));
+      if (r) return { value: r.rawValue, unit: r.unit || '', raw: r };
+    }
+    return null;
+  };
+
+  const grid    = find(['grid', 'ac input', 'mains']);
+  const essLoad = find(['ac consumption', 'essential loads', 'ac loads', 'load']);
+  const pv      = find(['pv power', 'solar charger power', 'pv - ac', 'solar power', 'pv charger']);
+  const soc     = find(['state of charge', 'battery soc', 'soc']);
+  const batPow  = find(['battery power', 'battery current']);
+
+  // Determine charging/discharging from battery power sign
+  let batDir = null;
+  if (batPow) {
+    const v = parseFloat(batPow.value);
+    if (!isNaN(v)) batDir = v >= 0 ? 'Charging' : 'Discharging';
+  }
+
+  const fmt = (r) => r ? `${r.value} ${r.unit}`.trim() : '--';
+
+  return {
+    grid:     fmt(grid),
+    essLoads: fmt(essLoad),
+    pvPower:  fmt(pv),
+    soc:      soc ? `${soc.value} ${soc.unit}`.trim() : '--',
+    batPower: batPow ? `${Math.abs(parseFloat(batPow.value))} ${batPow.unit}`.trim() : null,
+    batDir,
+  };
+}
+
+// ── HTML render ────────────────────────────────────────────────────────────
 function makeHTML(data) {
   const { grid, essLoads, pvPower, soc, batPower, batDir } = data;
-  const fmt = v => v !== null && v !== undefined ? v : '--';
   const batSub = [batDir, batPower].filter(Boolean).join(' ');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
@@ -110,59 +131,22 @@ h1 { font-size:30px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
 .card.orange { border-color:#f78166; }
 .card.yellow { border-color:#d29922; }
 .lbl { font-size:22px; color:#58a6ff; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; font-weight:700; }
+.card.green  .lbl { color:#3fb950; }
+.card.orange .lbl { color:#f78166; }
+.card.yellow .lbl { color:#d29922; }
 .val { font-size:72px; font-weight:800; color:#fff; line-height:1; }
 .sub { font-size:22px; color:#3fb950; margin-top:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
 .ts  { font-size:13px; color:#484f58; }
 </style></head><body>
 <h1>🏠 Casa Mia — Victron VRM</h1>
 <div class="grid">
-  <div class="card"><div class="lbl">⚡ Grid</div><div class="val">${fmt(grid)}</div></div>
-  <div class="card green"><div class="lbl">☀️ PV Charger</div><div class="val">${fmt(pvPower)}</div></div>
-  <div class="card orange"><div class="lbl">🔌 Essential Loads</div><div class="val">${fmt(essLoads)}</div></div>
-  <div class="card yellow"><div class="lbl">🔋 Battery</div><div class="val">${fmt(soc)}</div><div class="sub">${batSub}</div></div>
+  <div class="card"><div class="lbl">⚡ Grid</div><div class="val">${grid}</div></div>
+  <div class="card green"><div class="lbl">☀️ PV Charger</div><div class="val">${pvPower}</div></div>
+  <div class="card orange"><div class="lbl">🔌 Essential Loads</div><div class="val">${essLoads}</div></div>
+  <div class="card yellow"><div class="lbl">🔋 Battery</div><div class="val">${soc}</div><div class="sub">${batSub}</div></div>
 </div>
 <div class="ts">Aggiornato: ${agoString()}</div>
 </body></html>`;
-}
-
-function parseValues(lines) {
-  console.log('[scrape] lines:', JSON.stringify(lines.slice(0, 40)));
-
-  const findNext = (keywords) => {
-    for (let i = 0; i < lines.length; i++) {
-      const l = lines[i].toLowerCase();
-      if (keywords.some(k => l === k || l.startsWith(k))) {
-        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
-          if (/[\d]/.test(lines[j])) return lines[j];
-        }
-      }
-    }
-    return null;
-  };
-
-  // Battery: look for "Charging" or "Discharging" label
-  // Lines layout: "Charging"/"Discharging" → "311 W" → "81.0 %"
-  let batDir = null, batPower = null, soc = null;
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i].toLowerCase();
-    if (l === 'charging' || l === 'discharging') {
-      batDir = lines[i];
-      if (i + 1 < lines.length && /\d/.test(lines[i+1])) batPower = lines[i+1];
-      if (i + 2 < lines.length && lines[i+2].includes('%')) soc = lines[i+2];
-      else if (i + 2 < lines.length && /\d/.test(lines[i+2])) soc = lines[i+2];
-      break;
-    }
-  }
-
-  return {
-    grid:     findNext(['grid']),
-    essLoads: findNext(['essential loads', 'essential']),
-    pvPower:  findNext(['pv charger']),
-    soc,
-    batPower,
-    batDir,
-    time:     new Date().toLocaleTimeString('it-IT'),
-  };
 }
 
 // ── ffmpeg ─────────────────────────────────────────────────────────────────
@@ -186,65 +170,53 @@ function startFfmpeg() {
 }
 startFfmpeg();
 
-// ── Main loop ─────────────────────────────────────────────────────────────
+// ── Main loop ──────────────────────────────────────────────────────────────
 (async () => {
-  log('vrm-to-video', `Starting — scrape mode — ${fps}fps`);
-  let browser = null, dashPage = null, renderPage = null;
-  let values = { grid: null, essLoads: null, pvPower: null, soc: null, batPower: null, batDir: null };
-  let lastScrape = 0;
-  const SCRAPE_INTERVAL = 10000;
+  log('vrm-to-video', `Starting — API mode — ${fps}fps — fetch every ${FETCH_INTERVAL}ms`);
+
+  let browser = null, renderPage = null, authToken = null, tokenExpiry = 0;
+  let values = { grid: '--', essLoads: '--', pvPower: '--', soc: '--', batPower: null, batDir: null };
+  let lastFetch = 0;
 
   while (true) {
     const loopStart = Date.now();
     try {
+      // Init browser (render-only, no VRM navigation)
       if (!browser) {
-        const authToken = await vrmLogin();
-        log('puppeteer', 'launching browser...');
         browser = await puppeteer.launch({
           executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
           headless: true,
           args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage',
-                 '--disable-gpu','--use-gl=swiftshader','--enable-webgl',
-                 `--window-size=${WIDTH},${HEIGHT}`],
+                 '--disable-gpu',`--window-size=${WIDTH},${HEIGHT}`],
         });
-        // Page 1: VRM dashboard for scraping
         const pages = await browser.pages();
-        dashPage = pages[0] || await browser.newPage();
-        await dashPage.setViewport({ width: WIDTH, height: HEIGHT });
-        await dashPage.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        if (authToken) {
-          await dashPage.evaluateOnNewDocument(t => {
-            localStorage.setItem('jwt_token', t); localStorage.setItem('token', t);
-          }, authToken);
-        }
-        log('puppeteer', `navigating to ${VRM_URL}`);
-        await dashPage.goto(VRM_URL, { waitUntil: 'networkidle2', timeout: 60000 });
-        log('puppeteer', `landed: ${dashPage.url()} — "${await dashPage.title()}"`);
-        log('puppeteer', `waiting ${WAIT_AFTER_LOAD}ms for JS render...`);
-        await new Promise(r => setTimeout(r, WAIT_AFTER_LOAD));
-
-        // Page 2: blank page for rendering our HTML card
-        renderPage = await browser.newPage();
+        renderPage = pages[0] || await browser.newPage();
         await renderPage.setViewport({ width: WIDTH, height: HEIGHT });
-
-        log('puppeteer', 'ready');
+        log('puppeteer', 'render browser ready');
       }
 
-      // Reload page every RELOAD_INTERVAL to get fresh data
-      const RELOAD_INTERVAL = parseInt(process.env.RELOAD_INTERVAL || '15000');
-      if (Date.now() - lastScrape > RELOAD_INTERVAL) {
+      // Refresh auth token if needed (every 23h)
+      if (!authToken || Date.now() > tokenExpiry) {
+        authToken = await vrmLogin();
+        tokenExpiry = Date.now() + 23 * 3600 * 1000;
+      }
+
+      // Fetch telemetry from API
+      if (Date.now() - lastFetch > FETCH_INTERVAL) {
         try {
-          await dashPage.reload({ waitUntil: 'networkidle2', timeout: 30000 });
-          await new Promise(r => setTimeout(r, 4000));
-          const raw = await scrapeDashboard(dashPage);
-          values = parseValues(raw.lines);
-          lastScrape = Date.now();
+          values = await fetchTelemetry(authToken);
+          lastFetch = Date.now();
           lastScrapeTime = Date.now();
-          log('scrape', `grid=${values.grid} ess=${values.essLoads} pv=${values.pvPower} soc=${values.soc}`);
-        } catch(e) { err('scrape', e.message); }
+          log('api', `grid=${values.grid} ess=${values.essLoads} pv=${values.pvPower} soc=${values.soc}`);
+        } catch(e) {
+          err('api', e.message);
+          if (e.message.includes('401') || e.message.includes('auth')) {
+            authToken = null; // force re-login
+          }
+        }
       }
 
-      // Render and stream
+      // Render frame
       if (ffmpegReady && ffmpeg && ffmpeg.stdin.writable) {
         await renderPage.setContent(makeHTML(values), { waitUntil: 'domcontentloaded' });
         const png = await renderPage.screenshot({ type: 'png', fullPage: false });
@@ -252,16 +224,16 @@ startFfmpeg();
         ffmpeg.stdin.write(png);
 
         if (frameCount === 1) {
-          try { if (fs.existsSync(DEBUG_PATH)) fs.unlinkSync(DEBUG_PATH); fs.writeFileSync(DEBUG_PATH, png); } catch(_) {}
+          try { fs.writeFileSync(DEBUG_PATH, png); } catch(_) {}
           log('capture', `first frame — ${(png.length/1024).toFixed(1)} KB`);
         }
-        if (frameCount % 50 === 0) log('capture', `frame #${frameCount}`);
+        if (frameCount % 100 === 0) log('capture', `frame #${frameCount}`);
       }
 
     } catch(e) {
       err('loop', `${e.message} — restarting in 5s`);
       try { await browser?.close(); } catch(_) {}
-      browser = null; dashPage = null; renderPage = null;
+      browser = null; renderPage = null;
       await new Promise(r => setTimeout(r, 5000));
       continue;
     }
