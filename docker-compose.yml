@@ -26,7 +26,7 @@ services:
     environment:
       VRM_URL:         "https://vrm.victronenergy.com/installation/475708/share/102cf9ce"
       RTSP_URL:        "rtsp://mediamtx:8554/victron"
-      INTERVAL_MS:     "5000"
+      INTERVAL_MS:     "200"
       WIDTH:           "1280"
       HEIGHT:          "800"
       WAIT_AFTER_LOAD: "15000"
