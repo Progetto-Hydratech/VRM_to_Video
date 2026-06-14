@@ -76,7 +76,9 @@ async function vrmLogin() {
 
 // ── VRM API fetch ──────────────────────────────────────────────────────────
 async function fetchTelemetry(token) {
-  const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/diagnostics`, null, token);
+  const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/stats?type=live_feed`, null, token);
+  log('api-raw', JSON.stringify(res).slice(0, 500));
+
   const records = Array.isArray(res?.records) ? res.records : (res?.records?.data || []);
 
   if (records.length === 0) {
@@ -84,17 +86,17 @@ async function fetchTelemetry(token) {
     return null;
   }
 
-  // Lookup by exact attribute ID (more reliable than keyword matching)
+  // Lookup by exact attribute ID
   const byId = {};
   records.forEach(r => { byId[r.idDataAttribute] = r; });
 
   const getVal = (id) => byId[id]?.rawValue ?? null;
 
-  const gridW    = parseFloat(getVal(379));  // Grid L1 - Power (from grid meter)
-  const essW     = parseFloat(getVal(567));  // AC Consumption on Output L1 (essential loads)
-  const pvW      = parseFloat(getVal(442));  // PV power (actual current power from MPPT)
-  const soc      = parseFloat(getVal(144));  // Battery SOC %
-  const batW     = parseFloat(getVal(243));  // Battery Power (positive=charging, negative=discharging)
+  const gridW    = parseFloat(getVal(379));
+  const essW     = parseFloat(getVal(567));
+  const pvW      = parseFloat(getVal(442));
+  const soc      = parseFloat(getVal(144));
+  const batW     = parseFloat(getVal(243));
 
   const batDir   = !isNaN(batW) ? (batW >= 0 ? 'Charging' : 'Discharging') : null;
   const fmtW = (v) => isNaN(v) ? '--' : `${Math.round(v)} W`;
