@@ -1,0 +1,4 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY onvif_server.py .
+CMD ["python", "-u", "onvif_server.py"]
