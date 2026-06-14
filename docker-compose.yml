@@ -31,3 +31,5 @@ services:
       HEIGHT:          "800"
       WAIT_AFTER_LOAD: "15000"
     shm_size: "256mb"
+    volumes:
+      - /TRE_TB/media:/media
