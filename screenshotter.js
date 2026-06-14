@@ -14,11 +14,22 @@ const VRM_USERNAME   = process.env.VRM_USERNAME;
 const VRM_PASSWORD   = process.env.VRM_PASSWORD;
 const VRM_TOTP_SECRET= process.env.VRM_TOTP_SECRET;
 
+const DEBUG_PATH = '/media/debug_screenshot.png';
 const fps = (1000 / INTERVAL_MS).toFixed(4);
 
 function ts()  { return new Date().toISOString(); }
 function log(tag, msg) { console.log(`${ts()} [${tag}] ${msg}`); }
 function err(tag, msg) { console.error(`${ts()} [${tag}] ERROR: ${msg}`); }
+
+function saveDebugScreenshot(png) {
+  try {
+    if (fs.existsSync(DEBUG_PATH)) fs.unlinkSync(DEBUG_PATH);
+    fs.writeFileSync(DEBUG_PATH, png);
+    log('debug', `screenshot saved to ${DEBUG_PATH} — ${(png.length/1024).toFixed(1)} KB`);
+  } catch (e) {
+    log('debug', `could not save screenshot: ${e.message}`);
+  }
+}
 
 function apiPost(path, body, token) {
   return new Promise((resolve, reject) => {
@@ -51,7 +62,6 @@ async function vrmLogin() {
     log('auth', 'No credentials set — navigating directly without login');
     return null;
   }
-
   log('auth', `Logging in as ${VRM_USERNAME}...`);
   const res1 = await apiPost('/v2/auth/login', { username: VRM_USERNAME, password: VRM_PASSWORD });
   log('auth', `Login response: ${JSON.stringify(res1)}`);
@@ -152,8 +162,7 @@ startFfmpeg();
         await new Promise(r => setTimeout(r, WAIT_AFTER_LOAD));
 
         const debugPng = await page.screenshot({ type: 'png', fullPage: false });
-        fs.writeFileSync('/tmp/debug_screenshot.png', debugPng);
-        log('puppeteer', `debug screenshot saved — ${(debugPng.length/1024).toFixed(1)} KB`);
+        saveDebugScreenshot(debugPng);
 
         browser._page = page;
         log('puppeteer', 'ready, starting capture loop');
@@ -167,6 +176,7 @@ startFfmpeg();
         ffmpeg.stdin.write(png);
         if (frameCount === 1 || frameCount % 10 === 0) {
           log('capture', `frame #${frameCount} — ${(png.length / 1024).toFixed(1)} KB → ffmpeg`);
+          saveDebugScreenshot(png);
         }
       } else {
         log('capture', `skipping frame — ffmpegReady=${ffmpegReady}`);
