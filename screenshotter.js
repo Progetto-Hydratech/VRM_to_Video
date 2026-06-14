@@ -150,8 +150,15 @@ h1 { font-size:30px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
 const ffmpegArgs = [
   '-f', 'image2pipe', '-framerate', fps, '-i', 'pipe:0',
   '-vf', `scale=${WIDTH}:${HEIGHT}`,
-  '-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency',
-  '-pix_fmt', 'yuv420p', '-f', 'rtsp', '-rtsp_transport', 'tcp', RTSP_URL,
+  '-c:v', 'libx264',
+  '-profile:v', 'baseline',
+  '-level:v', '3.1',
+  '-preset', 'ultrafast',
+  '-tune', 'zerolatency',
+  '-pix_fmt', 'yuv420p',
+  '-g', '50',
+  '-b:v', '2M', '-maxrate', '2M', '-bufsize', '4M',
+  '-f', 'rtsp', '-rtsp_transport', 'tcp', RTSP_URL,
 ];
 let ffmpeg = null, ffmpegReady = false, frameCount = 0;
 
