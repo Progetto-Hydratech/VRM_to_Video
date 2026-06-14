@@ -9,10 +9,10 @@ services:
     restart: unless-stopped
     ports:
       - "8554:8554"      # RTSP  → point your NVR here
-      - "8888:8888"      # WebRTC (bonus: watch in browser)
+      - "8888:8888"      # WebRTC / HLS viewer
       - "8889:8889"      # WebRTC/WHIP
     environment:
-      MTX_LOGLEVEL: info
+      MTX_LOGLEVEL: debug
       MTX_LOGDESTINATIONS: stdout
       MTX_RTSPADDRESS: :8554
       MTX_PATHS_VICTRON_READANYUSER: "true"
