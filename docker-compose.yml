@@ -36,19 +36,12 @@ services:
     volumes:
       - /TRE_TB/media:/media
 
-  onvif:
-    build:
-      context: .
-      dockerfile: Dockerfile.onvif
-    container_name: vrm-onvif
+  go2rtc:
+    image: alexxit/go2rtc
+    container_name: vrm-go2rtc
     restart: unless-stopped
     network_mode: host
-    environment:
-      ONVIF_SERVER_IP: "192.168.1.112"
-      RTSP_SERVER_IP:  "192.168.1.112"
-      RTSP_PORT:       "8554"
-      RTSP_PATH:       "victron"
-      ONVIF_PORT:      "31472"
-      DEVICE_NAME:     "Victron VRM"
+    volumes:
+      - ./go2rtc.yaml:/config/go2rtc.yaml:ro
     depends_on:
       - mediamtx
