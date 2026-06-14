@@ -78,8 +78,7 @@ async function scrapeDashboard(page) {
 
     // Try to extract all text content with W and % values
     const allText = document.body.innerText;
-    const lines = allText.split('
-').map(l => l.trim()).filter(Boolean);
+    const lines = allText.split('\n').map(l => l.trim()).filter(Boolean);
 
     return { lines, url: window.location.href, title: document.title };
   });
