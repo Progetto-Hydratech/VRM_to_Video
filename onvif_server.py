@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import os, socket, struct, threading, textwrap, time, hashlib, uuid, re, base64
+import os, socket, struct, threading, textwrap, time, hashlib, uuid
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from datetime import datetime, timezone
 
 HOST_IP    = os.environ.get('ONVIF_SERVER_IP', '192.168.1.112')
 RTSP_IP    = os.environ.get('RTSP_SERVER_IP',  '192.168.1.112')
@@ -10,6 +11,7 @@ ONVIF_PORT = int(os.environ.get('ONVIF_PORT',   '31472'))
 DEVICE_NAME= os.environ.get('DEVICE_NAME',      'Victron VRM')
 ONVIF_USER = os.environ.get('ONVIF_USER',       'admin')
 ONVIF_PASS = os.environ.get('ONVIF_PASS',       'admin')
+ONVIF_FPS  = int(os.environ.get('FPS',          '25'))
 DEVICE_UUID= str(uuid.UUID(int=int(hashlib.md5(HOST_IP.encode()).hexdigest(), 16)))
 
 RTSP_URL   = f"rtsp://{RTSP_IP}:{RTSP_PORT}/{RTSP_PATH}"
@@ -120,51 +122,12 @@ class ONVIFHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print(f'[ONVIF HTTP] {self.address_string()} {fmt % args}', flush=True)
 
-    def _check_auth(self, body):
-        """Validate WS-Security UsernameToken (digest or plaintext). Returns True if OK."""
-        if ONVIF_USER == '' and ONVIF_PASS == '':
-            return True
-        username_m = re.search(r'<[^>]*Username[^>]*>([^<]+)</', body)
-        password_m = re.search(r'<[^>]*Password[^>]*>([^<]+)</', body)
-        nonce_m    = re.search(r'<[^>]*Nonce[^>]*>([^<]+)</', body)
-        created_m  = re.search(r'<[^>]*Created[^>]*>([^<]+)</', body)
-        if not username_m:
-            return True  # no security header — allow (GetSystemDateAndTime is always unauthenticated)
-        username = username_m.group(1).strip()
-        password = password_m.group(1).strip() if password_m else ''
-        if username != ONVIF_USER:
-            print(f'[ONVIF auth] wrong username: {username}', flush=True)
-            return False
-        # Try digest: Base64(SHA1(nonce_bytes + created_bytes + password_bytes))
-        if nonce_m and created_m:
-            try:
-                nonce_bytes   = base64.b64decode(nonce_m.group(1).strip())
-                created_bytes = created_m.group(1).strip().encode('utf-8')
-                pass_bytes    = ONVIF_PASS.encode('utf-8')
-                digest        = base64.b64encode(hashlib.sha1(nonce_bytes + created_bytes + pass_bytes).digest()).decode()
-                if digest == password:
-                    return True
-            except Exception:
-                pass
-        # Fall back to plaintext comparison
-        if password == ONVIF_PASS:
-            return True
-        print(f'[ONVIF auth] auth failed for user {username}', flush=True)
-        return False
-
     def do_POST(self):
         length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(length).decode('utf-8', errors='ignore')
 
-        # GetSystemDateAndTime is always allowed unauthenticated (needed to sync time before auth)
-        if 'GetSystemDateAndTime' not in body and not self._check_auth(body):
-            self.send_response(401)
-            self.send_header('Content-Type', 'application/soap+xml; charset=utf-8')
-            self.end_headers()
-            self.wfile.write(b'<?xml version="1.0"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"><s:Body><s:Fault><s:Code><s:Value>s:Sender</s:Value></s:Code><s:Reason><s:Text>Authentication failed</s:Text></s:Reason></s:Fault></s:Body></s:Envelope>')
-            return
+        # Accept any credentials
         if 'GetSystemDateAndTime' in body:
-            from datetime import datetime, timezone
             now = datetime.now(timezone.utc)
             resp = soap_response(f"""
 <tds:GetSystemDateAndTimeResponse>
@@ -249,6 +212,7 @@ if __name__ == '__main__':
     print(f'[ONVIF] RTSP: {RTSP_URL}', flush=True)
     print(f'[ONVIF] HTTP: {ONVIF_URL}', flush=True)
     print(f'[ONVIF] Credentials: {ONVIF_USER} / {ONVIF_PASS}', flush=True)
+    print(f'[ONVIF] FPS: {ONVIF_FPS}', flush=True)
     threading.Thread(target=wsd_listener, daemon=True).start()
     server = ReusableHTTPServer(('0.0.0.0', ONVIF_PORT), ONVIFHandler)
     print(f'[ONVIF] HTTP server on port {ONVIF_PORT}', flush=True)
