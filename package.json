@@ -7,6 +7,7 @@
     "start": "node screenshotter.js"
   },
   "dependencies": {
-    "puppeteer-core": "^22.0.0"
+    "puppeteer-core": "^22.0.0",
+    "otpauth": "^9.0.0"
   }
 }
