@@ -79,6 +79,8 @@ async function fetchTelemetry(token) {
   const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/diagnostics`, null, token);
   const records = Array.isArray(res?.records) ? res.records : (res?.records?.data || []);
 
+  log('api-raw-full', JSON.stringify(records));
+
   if (records.length === 0) {
     log('api-raw', 'empty response: ' + JSON.stringify(res).slice(0, 300));
     return null;
@@ -87,11 +89,6 @@ async function fetchTelemetry(token) {
   // Lookup by exact attribute ID
   const byId = {};
   records.forEach(r => { byId[r.idDataAttribute] = r; });
-
-  // Log all attributes (remove after inspection)
-  records.forEach(r => {
-    log('attr', `[${r.idDataAttribute}] ${r.description} = ${r.rawValue} ${r.unit || ''}`);
-  });
 
   const getVal = (id) => byId[id]?.rawValue ?? null;
 
