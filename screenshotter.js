@@ -88,6 +88,11 @@ async function fetchTelemetry(token) {
   const byId = {};
   records.forEach(r => { byId[r.idDataAttribute] = r; });
 
+  // Log all attributes (remove after inspection)
+  records.forEach(r => {
+    log('attr', `[${r.idDataAttribute}] ${r.description} = ${r.rawValue} ${r.unit || ''}`);
+  });
+
   const getVal = (id) => byId[id]?.rawValue ?? null;
 
   const gridW    = parseFloat(getVal(379));
