@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, socket, struct, threading, textwrap, time, hashlib, uuid
+import os, socket, struct, threading, textwrap, time, hashlib, uuid, re, base64
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 HOST_IP    = os.environ.get('ONVIF_SERVER_IP', '192.168.1.112')
