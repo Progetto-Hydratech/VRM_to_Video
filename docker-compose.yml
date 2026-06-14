@@ -26,11 +26,9 @@ services:
     depends_on:
       - mediamtx
     environment:
-      RTSP_URL:        "rtsp://mediamtx:8554/victron"
-      FPS:             "15"
-      WIDTH:           "1280"
-      HEIGHT:          "800"
-      VRM_SITE_ID:     "475708"
+      RTSP_URL:  "rtsp://mediamtx:8554/victron"
+      WIDTH:     "1280"
+      HEIGHT:    "800"
     shm_size: "256mb"
     volumes:
       - /TRE_TB/media:/media
