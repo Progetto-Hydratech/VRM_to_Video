@@ -11,7 +11,7 @@ ONVIF_PORT = int(os.environ.get('ONVIF_PORT',   '31472'))
 DEVICE_NAME= os.environ.get('DEVICE_NAME',      'Victron VRM')
 ONVIF_USER = os.environ.get('ONVIF_USER',       'admin')
 ONVIF_PASS = os.environ.get('ONVIF_PASS',       'admin')
-DEVICE_UUID= str(uuid4())
+DEVICE_UUID= str(uuid4(int=int(hashlib.md5(HOST_IP.encode()).hexdigest(), 16)))
 
 RTSP_URL   = f"rtsp://{RTSP_IP}:{RTSP_PORT}/{RTSP_PATH}"
 ONVIF_URL  = f"http://{HOST_IP}:{ONVIF_PORT}/onvif/device_service"
