@@ -109,9 +109,9 @@ h1 { font-size:30px; color:#58a6ff; font-weight:700; letter-spacing:.5px; }
 .card.green  { border-color:#3fb950; }
 .card.orange { border-color:#f78166; }
 .card.yellow { border-color:#d29922; }
-.lbl { font-size:15px; color:#8b949e; text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; }
+.lbl { font-size:22px; color:#58a6ff; text-transform:uppercase; letter-spacing:2px; margin-bottom:14px; font-weight:700; }
 .val { font-size:72px; font-weight:800; color:#fff; line-height:1; }
-.sub { font-size:18px; color:#8b949e; margin-top:12px; }
+.sub { font-size:22px; color:#3fb950; margin-top:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
 .ts  { font-size:13px; color:#484f58; }
 </style></head><body>
 <h1>🏠 Casa Mia — Victron VRM</h1>
