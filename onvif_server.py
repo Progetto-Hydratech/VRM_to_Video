@@ -31,7 +31,7 @@ def make_hello():
   xmlns:wsd="http://schemas.xmlsoap.org/ws/2005/04/discovery"
   xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
   <SOAP-ENV:Header>
-    <wsa:MessageID>urn:uuid:{uuid4()}</wsa:MessageID>
+    <wsa:MessageID>urn:uuid:{uuid.uuid4()}</wsa:MessageID>
     <wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
     <wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello</wsa:Action>
     <wsd:AppSequence MessageNumber="1" SequenceId="urn:uuid:{DEVICE_UUID}"/>
@@ -56,7 +56,7 @@ def make_probe_match(relates_to):
   xmlns:wsd="http://schemas.xmlsoap.org/ws/2005/04/discovery"
   xmlns:dn="http://www.onvif.org/ver10/network/wsdl">
   <SOAP-ENV:Header>
-    <wsa:MessageID>urn:uuid:{uuid4()}</wsa:MessageID>
+    <wsa:MessageID>urn:uuid:{uuid.uuid4()}</wsa:MessageID>
     <wsa:RelatesTo>{relates_to}</wsa:RelatesTo>
     <wsa:To>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:To>
     <wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches</wsa:Action>
