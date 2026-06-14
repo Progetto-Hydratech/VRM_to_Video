@@ -89,7 +89,10 @@ def soap_response(body):
   <SOAP-ENV:Body>{body}</SOAP-ENV:Body>
 </SOAP-ENV:Envelope>""")
 
-HTTPServer.allow_reuse_address = True
+
+
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
 
 class ONVIFHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
@@ -175,6 +178,6 @@ if __name__ == '__main__':
     print(f'[ONVIF] RTSP: {RTSP_URL}', flush=True)
     print(f'[ONVIF] HTTP: {ONVIF_URL}', flush=True)
     threading.Thread(target=wsd_listener, daemon=True).start()
-    server = HTTPServer(('0.0.0.0', ONVIF_PORT), ONVIFHandler)
+    server = ReusableHTTPServer(('0.0.0.0', ONVIF_PORT), ONVIFHandler)
     print(f'[ONVIF] HTTP server on port {ONVIF_PORT}', flush=True)
     server.serve_forever()
