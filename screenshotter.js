@@ -230,23 +230,15 @@ startFfmpeg();
         log('puppeteer', 'ready');
       }
 
-      // Reload page every RELOAD_INTERVAL to get fresh websocket data
-      const RELOAD_INTERVAL = parseInt(process.env.RELOAD_INTERVAL || '30000');
+      // Reload page every RELOAD_INTERVAL to get fresh data
+      const RELOAD_INTERVAL = parseInt(process.env.RELOAD_INTERVAL || '15000');
       if (Date.now() - lastScrape > RELOAD_INTERVAL) {
         try {
-          log('scrape', 'reloading VRM page for fresh data...');
           await dashPage.reload({ waitUntil: 'networkidle2', timeout: 30000 });
-          await new Promise(r => setTimeout(r, 5000));
+          await new Promise(r => setTimeout(r, 4000));
           const raw = await scrapeDashboard(dashPage);
           values = parseValues(raw.lines);
           lastScrape = Date.now();
-          lastScrapeTime = Date.now();
-          log('scrape', `grid=${values.grid} ess=${values.essLoads} pv=${values.pvPower} soc=${values.soc}`);
-        } catch(e) { err('scrape', e.message); }
-      } else if (Date.now() - lastScrapeTime > 10000) {
-        try {
-          const raw = await scrapeDashboard(dashPage);
-          values = parseValues(raw.lines);
           lastScrapeTime = Date.now();
           log('scrape', `grid=${values.grid} ess=${values.essLoads} pv=${values.pvPower} soc=${values.soc}`);
         } catch(e) { err('scrape', e.message); }
