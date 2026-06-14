@@ -76,9 +76,7 @@ async function vrmLogin() {
 
 // ── VRM API fetch ──────────────────────────────────────────────────────────
 async function fetchTelemetry(token) {
-  const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/stats?type=live_feed`, null, token);
-  log('api-raw', JSON.stringify(res).slice(0, 500));
-
+  const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/diagnostics`, null, token);
   const records = Array.isArray(res?.records) ? res.records : (res?.records?.data || []);
 
   if (records.length === 0) {
