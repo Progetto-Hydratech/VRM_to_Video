@@ -231,7 +231,7 @@ startFfmpeg();
       }
 
       // Reload page every RELOAD_INTERVAL to get fresh websocket data
-      const RELOAD_INTERVAL = parseInt(process.env.RELOAD_INTERVAL || '120000');
+      const RELOAD_INTERVAL = parseInt(process.env.RELOAD_INTERVAL || '30000');
       if (Date.now() - lastScrape > RELOAD_INTERVAL) {
         try {
           log('scrape', 'reloading VRM page for fresh data...');
