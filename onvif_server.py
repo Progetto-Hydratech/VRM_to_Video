@@ -191,8 +191,41 @@ class ONVIFHandler(BaseHTTPRequestHandler):
   </trt:MediaUri>
 </trt:GetStreamUriResponse>""")
 
+        elif 'GetVideoSources' in body:
+            resp = soap_response(f"""
+<trt:GetVideoSourcesResponse>
+  <trt:VideoSources token="vs1">
+    <tt:Framerate>{ONVIF_FPS}</tt:Framerate>
+    <tt:Resolution><tt:Width>1280</tt:Width><tt:Height>720</tt:Height></tt:Resolution>
+  </trt:VideoSources>
+</trt:GetVideoSourcesResponse>""")
+
+        elif 'GetVideoEncoderConfigurations' in body:
+            resp = soap_response(f"""
+<trt:GetVideoEncoderConfigurationsResponse>
+  <trt:Configurations token="vec1">
+    <tt:Name>H264</tt:Name>
+    <tt:Encoding>H264</tt:Encoding>
+    <tt:Resolution><tt:Width>1280</tt:Width><tt:Height>720</tt:Height></tt:Resolution>
+    <tt:RateControl><tt:FrameRateLimit>{ONVIF_FPS}</tt:FrameRateLimit><tt:EncodingInterval>1</tt:EncodingInterval><tt:BitrateLimit>2048</tt:BitrateLimit></tt:RateControl>
+    <tt:H264><tt:GovLength>50</tt:GovLength><tt:H264Profile>Baseline</tt:H264Profile></tt:H264>
+  </trt:Configurations>
+</trt:GetVideoEncoderConfigurationsResponse>""")
+
+        elif 'GetSnapshotUri' in body:
+            resp = soap_response(f"""
+<trt:GetSnapshotUriResponse>
+  <trt:MediaUri>
+    <tt:Uri>http://{HOST_IP}:{ONVIF_PORT}/snapshot</tt:Uri>
+    <tt:InvalidAfterConnect>false</tt:InvalidAfterConnect>
+    <tt:InvalidAfterReboot>false</tt:InvalidAfterReboot>
+    <tt:Timeout>PT0S</tt:Timeout>
+  </trt:MediaUri>
+</trt:GetSnapshotUriResponse>""")
+
         else:
-            print(f'[ONVIF HTTP] unhandled: {body[:150]}', flush=True)
+            # Log full body to identify missing methods
+            print(f'[ONVIF HTTP] unhandled action: {body}', flush=True)
             resp = soap_response('<tds:GetSystemDateAndTimeResponse/>')
 
         encoded = resp.encode('utf-8')
