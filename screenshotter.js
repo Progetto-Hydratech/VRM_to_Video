@@ -79,10 +79,14 @@ async function fetchTelemetry(token) {
   const res = await apiRequest('GET', `/v2/installations/${SITE_ID}/diagnostics`, null, token);
   const records = res?.records?.data || [];
 
+  log('api-raw', `total records: ${records.length}`);
   if (records.length > 0 && !fetchTelemetry._logged) {
     fetchTelemetry._logged = true;
     log('api', 'Available attributes:');
-    records.forEach(r => log('api', `  [${r.idDataAttribute}] ${r.description}: ${r.rawValue} ${r.unit||''}`));
+    records.slice(0, 60).forEach(r => log('api', `  [${r.idDataAttribute}] ${r.description}: ${r.rawValue} ${r.unit||''}`));
+  }
+  if (records.length === 0) {
+    log('api-raw', 'RAW response: ' + JSON.stringify(res).slice(0, 500));
   }
 
   const find = (keywords) => {
