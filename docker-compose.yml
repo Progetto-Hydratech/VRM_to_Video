@@ -49,5 +49,6 @@ services:
       RTSP_PATH:       "victron"
       ONVIF_PORT:      "31472"
       DEVICE_NAME:     "Victron VRM"
+      FPS:             ${FPS:-25}
     depends_on:
       - mediamtx
