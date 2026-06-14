@@ -11,7 +11,7 @@ HOST_IP   = os.environ.get('ONVIF_SERVER_IP', '192.168.1.112')
 RTSP_IP   = os.environ.get('RTSP_SERVER_IP',  '192.168.1.112')
 RTSP_PORT = os.environ.get('RTSP_PORT',        '8554')
 RTSP_PATH = os.environ.get('RTSP_PATH',        'victron')
-ONVIF_PORT= int(os.environ.get('ONVIF_PORT',   '8080'))
+ONVIF_PORT= int(os.environ.get('ONVIF_PORT', '8090'))
 DEVICE_NAME=os.environ.get('DEVICE_NAME',      'Victron VRM')
 DEVICE_UUID= str(uuid4())
 
@@ -88,6 +88,8 @@ def soap_response(body):
   xmlns:tt="http://www.onvif.org/ver10/schema">
   <SOAP-ENV:Body>{body}</SOAP-ENV:Body>
 </SOAP-ENV:Envelope>""")
+
+HTTPServer.allow_reuse_address = True
 
 class ONVIFHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
